@@ -1,0 +1,13 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { validateBooking, manilaDate, slotLabel } from "../lib/config";
+const now = new Date("2026-10-11T16:30:00Z");
+const valid = { name: "Test Patient", phone: "09123456789", email: "TEST@example.invalid", service: "General dentistry", preferred_date: "2026-10-13", preferred_time: "09:00", consent: true, request_id: "1b90c68a-79c3-47c0-b53d-00c7c0606376" };
+test("uses Philippine date at UTC midnight boundaries", () => assert.equal(manilaDate(0, now), "2026-10-12"));
+test("normalizes phone and email for duplicate/rate checks", () => { const r = validateBooking(valid, now); assert.ok("data" in r); assert.equal(r.data.phone, "+639123456789"); assert.equal(r.data.email, "test@example.invalid"); });
+test("rejects invalid JSON shapes without throwing", () => { for (const b of [null, [], "text", 4]) assert.ok("error" in validateBooking(b, now)); });
+test("rejects impossible dates instead of JS date rollover", () => assert.ok("error" in validateBooking({ ...valid, preferred_date: "2026-11-31" }, now)));
+test("rejects today, dates outside horizon and invalid times", () => { for (const b of [{ preferred_date: "2026-10-12" },{ preferred_date: "2027-02-01" },{ preferred_time: "17:00" }]) assert.ok("error" in validateBooking({ ...valid, ...b }, now)); });
+test("requires explicit consent and idempotency key", () => { for (const b of [{ consent: "true" },{ consent: false },{ request_id: "bad" }]) assert.ok("error" in validateBooking({ ...valid, ...b }, now)); });
+test("rejects unknown service, invalid phone and oversized names", () => { for (const b of [{ service: "Fake service" },{ phone: "abc" },{ name: "x".repeat(81) }]) assert.ok("error" in validateBooking({ ...valid, ...b }, now)); });
+test("formats noon and afternoon correctly", () => { assert.equal(slotLabel("12:00"), "12:00 PM"); assert.equal(slotLabel("16:30"), "4:30 PM"); });
