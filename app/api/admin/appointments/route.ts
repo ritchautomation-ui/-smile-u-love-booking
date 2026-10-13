@@ -21,7 +21,7 @@ export async function GET(req: Request) {
       ? query.order("id", { ascending: true }).range(0, 999)
       : query.order("created_at", { ascending: false }).range(page * 30, page * 30 + 29));
     if (error) { logCode("list", error.code); return json({ error: diagnostic(error.code) }, 503); }
-    if (sorting && (count || 0) > 1000) return json({ error: "Bubble Sort demonstration supports up to 1,000 matching appointments. Narrow the status, date, or search filter." }, 422);
+    if (sorting && (count || 0) > 1000) return json({ error: "Too many matching appointments to sort at once. Narrow the status, date, or search filter." }, 422);
     if (sorting && data && data.length !== count) return json({ error: "The database returned an incomplete list. Narrow the filters before sorting." }, 503);
     const sorted = sorting ? bubbleSortAppointments((data || []) as Appointment[], sort as SortField) : null;
     const health = await database().rpc("sul_booking_health");
